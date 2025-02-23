@@ -1,7 +1,7 @@
 [package]
 name = "village"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 bevy = "0.11.2"
