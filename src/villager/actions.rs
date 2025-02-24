@@ -6,9 +6,11 @@ use bevy::prelude::*;
 use bevy::utils::hashbrown::HashSet;
 use rand::Rng;
 
+use crate::assets::SceneAssets;
 use crate::fsm::*;
 
 use crate::harvestable::tree::*;
+use crate::resource::spawn_wood;
 use crate::structure::house::*;
 use crate::villager::villager::*;
 
@@ -21,6 +23,7 @@ pub fn villager_update(
     trees: Query<(Entity, &Transform), (With<Tree>, Without<Villager>, Without<House>)>,
     time: Res<Time>,
     mut commands: Commands,
+    scene_assets: Res<SceneAssets>,
 ) {
     let houses_iter = houses.iter().collect::<Vec<_>>();
     let trees_iter = trees.iter().collect::<Vec<_>>();
@@ -54,7 +57,7 @@ pub fn villager_update(
                 transform.look_at(target, Vec3::Y);
                 if villager.fsm.is_finished(transform.translation) {
                     action = match villager.fsm.state {
-                        FSMState::WalkingToGather(target, _) => FSMDecision::Gather(target, 0.3),
+                        FSMState::WalkingToGather(target, _) => FSMDecision::Gather(target, 0.7),
                         _ => FSMDecision::Finished,
                     }
                 }
@@ -62,13 +65,16 @@ pub fn villager_update(
             FSMState::Gathering(entity, _) => {
                 if villager.fsm.is_finished(transform.translation) {
                     action = FSMDecision::Finished;
-                    commands.entity(entity).despawn_recursive();
+                    if let Some(entity) = commands.get_entity(entity) {
+                        entity.despawn_recursive();
+                    }
+                    spawn_wood(&mut commands, &scene_assets, transform.translation, rand::rng().random_range(1..10));
                 }
             }
             _ => {}
         }
 
-        println!("state: {:?}, action: {:?}", villager.fsm.state, action);
+        // println!("state: {:?}, action: {:?}", villager.fsm.state, action);
 
         villager.fsm.state = villager.fsm.update(action, time.delta_secs());
     }
