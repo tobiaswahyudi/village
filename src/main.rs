@@ -3,7 +3,7 @@
 mod fsm;
 mod resource;
 
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{prelude::*, utils::{hashbrown::HashSet, HashMap}};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
@@ -30,7 +30,8 @@ fn main() {
         .add_plugins(WorldInspectorPlugin::new())
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
-        .add_systems(Update, (villager_movement, grow_tree))
+        .add_systems(Update, (villager_update, grow_tree))
+        .add_systems(PostUpdate, villager_cancel_if_entity_deleted)
         .run();
 }
 
@@ -183,6 +184,21 @@ fn setup(
         Name::new("Villager"),
     ));
 
+    commands.spawn((
+        SceneRoot(
+            scene_assets
+                .handles
+                .get(&SceneAssetType::Villager)
+                .unwrap()
+                .clone(),
+        ),
+        Transform::from_xyz(0.0, 0.0, 0.0).with_scale(GLOBAL_SCALE_VEC),
+        Villager {
+            fsm: FSM::new_idle(),
+        },
+        Name::new("Villager"),
+    ));
+
     // light
     commands.spawn((
         PointLight {
@@ -205,7 +221,7 @@ fn setup(
 
 const MOVEMENT_SPEED: f32 = 3.0;
 
-fn villager_movement(
+fn villager_update(
     mut villagers: Query<
         (&mut Villager, &mut Transform),
         (With<Villager>, Without<House>, Without<Tree>),
@@ -243,7 +259,10 @@ fn villager_movement(
                     if trees_iter.len() > 0 {
                         let (target_tree, target_tree_transform) =
                             trees_iter[rand::rng().random_range(0..trees_iter.len())];
-                        action = FSMDecision::WalkToGather(target_tree, target_tree_transform.translation);
+                        action = FSMDecision::WalkToGather(
+                            target_tree,
+                            target_tree_transform.translation,
+                        );
                     }
                 }
             }
@@ -256,7 +275,7 @@ fn villager_movement(
                 transform.look_at(target, Vec3::Y);
                 if villager.fsm.is_finished(transform.translation) {
                     action = match villager.fsm.state {
-                        FSMState::WalkingToGather(target, _) => FSMDecision::Gather(target, 1.0),
+                        FSMState::WalkingToGather(target, _) => FSMDecision::Gather(target, 0.3),
                         _ => FSMDecision::Finished,
                     }
                 }
@@ -291,4 +310,23 @@ fn grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: Res<T
 
     let random_position = Vec3::new(x, 0.0, z);
     spawn_tree(&mut commands, &scene_assets, random_position);
+}
+
+fn villager_cancel_if_entity_deleted(
+    mut villagers: Query<&mut Villager>,
+    mut deleted_entities: RemovedComponents<Tree>,
+) {
+    // convert to a set
+    let deleted_entities = deleted_entities.read().collect::<HashSet<_>>();
+
+    for (mut villager) in &mut villagers {
+        match villager.fsm.state {
+            FSMState::WalkingToGather(target, _) | FSMState::Gathering(target, _) => {
+                if deleted_entities.contains(&target) {
+                    villager.fsm.state = FSMState::Idle;
+                }
+            }
+            _ => {}
+        }
+    }
 }
