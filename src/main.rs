@@ -4,6 +4,11 @@ use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
 
+use smooth_bevy_cameras::{
+    controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
+    LookTransformPlugin,
+};
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -15,6 +20,8 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(LookTransformPlugin)
+        .add_plugins(OrbitCameraPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
@@ -41,15 +48,27 @@ pub struct SceneAssets {
 fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut asset_handles = HashMap::new();
 
-    asset_handles.insert(SceneAssetType::House, asset_server.load("house.glb#Scene0"));
+    asset_handles.insert(
+        SceneAssetType::House,
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("house.glb")),
+    );
 
-    asset_handles.insert(SceneAssetType::TreePine, asset_server.load("tree.glb#Scene0"));
-    asset_handles.insert(SceneAssetType::TreeRound, asset_server.load("tree.glb#Scene1"));
-    asset_handles.insert(SceneAssetType::TreeDead, asset_server.load("tree.glb#Scene2"));
+    asset_handles.insert(
+        SceneAssetType::TreePine,
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("tree.glb")),
+    );
+    asset_handles.insert(
+        SceneAssetType::TreeRound,
+        asset_server.load(GltfAssetLabel::Scene(1).from_asset("tree.glb")),
+    );
+    asset_handles.insert(
+        SceneAssetType::TreeDead,
+        asset_server.load(GltfAssetLabel::Scene(2).from_asset("tree.glb")),
+    );
 
     asset_handles.insert(
         SceneAssetType::Villager,
-        asset_server.load("villager_man.glb#Scene0"),
+        asset_server.load(GltfAssetLabel::Scene(0).from_asset("villager_man.glb")),
     );
 
     commands.insert_resource(SceneAssets {
@@ -70,16 +89,14 @@ pub struct Villager {
 
 fn spawn_house(commands: &mut Commands, scene_assets: &SceneAssets, position: Vec3) {
     commands.spawn((
-        SceneBundle {
-            scene: scene_assets
+        SceneRoot(
+            scene_assets
                 .handles
                 .get(&SceneAssetType::House)
                 .unwrap()
                 .clone(),
-            transform: Transform::from_xyz(position.x, position.y, position.z)
-                .with_scale(GLOBAL_SCALE_VEC),
-            ..default()
-        },
+        ),
+        Transform::from_xyz(position.x, position.y, position.z).with_scale(GLOBAL_SCALE_VEC),
         House,
         Name::new("House"),
     ));
@@ -94,12 +111,8 @@ const TREE_TYPES: [SceneAssetType; 3] = [
 fn spawn_tree(commands: &mut Commands, scene_assets: &SceneAssets, position: Vec3) {
     let tree_type = &TREE_TYPES[rand::rng().random_range(0..TREE_TYPES.len())];
     commands.spawn((
-        SceneBundle {
-            scene: scene_assets.handles.get(tree_type).unwrap().clone(),
-            transform: Transform::from_xyz(position.x, position.y, position.z)
-                .with_scale(GLOBAL_SCALE_VEC),
-            ..default()
-        },
+        SceneRoot(scene_assets.handles.get(tree_type).unwrap().clone()),
+        Transform::from_xyz(position.x, position.y, position.z).with_scale(GLOBAL_SCALE_VEC),
         Name::new("Tree"),
     ));
 }
@@ -114,12 +127,11 @@ fn setup(
     scene_assets: Res<SceneAssets>,
 ) {
     // circular base
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Circle::new(WORLD_RADIUS)),
-        material: materials.add(Color::srgb_u8(50, 200, 50)),
-        transform: Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-        ..default()
-    });
+    commands.spawn((
+        Mesh3d(meshes.add(Circle::new(WORLD_RADIUS))),
+        Transform::from_xyz(0.0, 0.0, 0.0).with_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
+        MeshMaterial3d(materials.add(Color::srgb_u8(50, 200, 50))),
+    ));
     // Houses
     // spawn_house(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
     spawn_house(&mut commands, &scene_assets, Vec3::new(3.0, 0.0, 1.0));
@@ -147,15 +159,14 @@ fn setup(
 
     // Villager
     commands.spawn((
-        SceneBundle {
-            scene: scene_assets
+        SceneRoot(
+            scene_assets
                 .handles
                 .get(&SceneAssetType::Villager)
                 .unwrap()
                 .clone(),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0).with_scale(GLOBAL_SCALE_VEC),
-            ..default()
-        },
+        ),
+        Transform::from_xyz(0.0, 0.0, 0.0).with_scale(GLOBAL_SCALE_VEC),
         Villager {
             moving_to: Vec3::new(0.0, 0.0, 0.0),
         },
@@ -163,19 +174,23 @@ fn setup(
     ));
 
     // light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
+    commands.spawn((
+        PointLight {
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    });
+        Transform::from_xyz(4.0, 8.0, 4.0),
+    ));
     // camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        OrbitCameraBundle::new(
+            OrbitCameraController::default(),
+            Vec3::new(-2.5, 4.5, 9.0),
+            Vec3::new(0., 0., 0.),
+            Vec3::Y,
+        ),
+    ));
 }
 
 const MOVEMENT_SPEED: f32 = 3.0;
@@ -195,7 +210,7 @@ fn villager_movement(
         } else {
             // move towards the house
             let direction = villager.moving_to - transform.translation;
-            transform.translation += direction.normalize() * MOVEMENT_SPEED * time.delta_seconds();
+            transform.translation += direction.normalize() * MOVEMENT_SPEED * time.delta_secs();
             transform.look_at(villager.moving_to, Vec3::Y);
         }
     }
@@ -204,7 +219,7 @@ fn villager_movement(
 const TREE_GROW_RATE: f32 = 0.5;
 
 fn grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: Res<Time>) {
-    if rand::rng().random::<f32>() > TREE_GROW_RATE * time.delta_seconds() {
+    if rand::rng().random::<f32>() > TREE_GROW_RATE * time.delta_secs() {
         return;
     }
 
