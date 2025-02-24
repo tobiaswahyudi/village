@@ -1,3 +1,7 @@
+const CLOSE_ENOUGH_DISTANCE: f32 = 0.1;
+
+////////////////////////////////////////////////////////////////
+
 use crate::resource::PickupItem;
 use bevy::math::*;
 use bevy::prelude::*;
@@ -46,8 +50,6 @@ pub enum FSMDecision {
     PickUp(Entity, Vec3, Option<PickupItem>),
     BringTo(Entity, Vec3, Option<PickupItem>),
 }
-
-const CLOSE_ENOUGH_DISTANCE: f32 = 0.1;
 
 impl FSM {
     pub fn new() -> Self {
