@@ -1,4 +1,4 @@
-use bevy::{prelude::*, scene::SceneInstance};
+use bevy::prelude::*;
 
 use crate::assets::*;
 

@@ -11,14 +11,6 @@ pub struct FSM {
     pub state: FSMState,
 }
 
-impl FSM {
-    pub fn new_idle() -> Self {
-        Self {
-            state: FSMState::Idle,
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct TaskProgress {
     time_needed: f32,
@@ -52,12 +44,12 @@ pub enum FSMDecision {
 }
 
 impl FSM {
-    pub fn new() -> Self {
+    pub fn new_idle() -> Self {
         Self {
             state: FSMState::Idle,
         }
     }
-
+    
     pub fn update(&mut self, decision: FSMDecision, time_delta: f32) -> FSMState {
         match (self.state, decision) {
             (_, FSMDecision::Finished) => FSMState::Idle,
