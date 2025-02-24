@@ -14,6 +14,7 @@ use crate::assets::*;
 use crate::harvestable::tree::*;
 use crate::structure::house::*;
 use crate::villager::{villager::*, actions::*};
+use resource::*;
 
 use smooth_bevy_cameras::{
     controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
@@ -37,7 +38,7 @@ fn main() {
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
         .add_systems(Update, (villager_update, grow_tree))
-        .add_systems(PostUpdate, villager_cancel_if_entity_deleted)
+        .add_systems(PostUpdate, (update_wood_stacks, villager_cancel_if_entity_deleted))
         .run();
 }
 
