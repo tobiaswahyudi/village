@@ -9,11 +9,12 @@ mod villager;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_rapier3d::prelude::*;
 
 use crate::assets::*;
 use crate::harvestable::tree::*;
 use crate::structure::house::*;
-use crate::villager::{villager::*, actions::*};
+use crate::villager::{actions::*, villager::*};
 use resource::*;
 
 use smooth_bevy_cameras::{
@@ -32,13 +33,18 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(RapierDebugRenderPlugin::default())
         .add_plugins(LookTransformPlugin)
         .add_plugins(OrbitCameraPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
         .add_systems(Update, (villager_update, grow_tree))
-        .add_systems(PostUpdate, (update_wood_stacks, villager_cancel_if_entity_deleted))
+        .add_systems(
+            PostUpdate,
+            (update_wood_stacks, villager_cancel_if_entity_deleted),
+        )
         .run();
 }
 
@@ -49,12 +55,21 @@ fn setup(
     scene_assets: Res<SceneAssets>,
 ) {
     // circular base
-    commands.spawn((
-        Mesh3d(meshes.add(Circle::new(WORLD_RADIUS))),
-        Transform::from_xyz(0.0, 0.0, 0.0)
-            .with_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
-        MeshMaterial3d(materials.add(Color::srgb_u8(50, 200, 50))),
-    ));
+    commands
+        .spawn((
+            Mesh3d(meshes.add(Circle::new(WORLD_RADIUS))),
+            Transform::from_xyz(0.0, 0.0, 0.0)
+                .with_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
+            MeshMaterial3d(materials.add(Color::srgb_u8(50, 200, 50))),
+            RigidBody::Fixed,
+        ))
+        .with_children(|this| {
+            this.spawn((
+                Collider::cylinder(1.0, WORLD_RADIUS),
+                Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0))
+                    .with_translation(Vec3::new(0.0, 0.0, -1.0)),
+            ));
+        });
     // Houses
     spawn_house(&mut commands, &scene_assets, Vec3::new(3.0, 0.0, 1.0));
     spawn_house(

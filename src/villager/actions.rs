@@ -68,7 +68,7 @@ pub fn villager_update(
                     if let Some(entity) = commands.get_entity(entity) {
                         entity.despawn_recursive();
                     }
-                    spawn_wood(&mut commands, &scene_assets, transform.translation, rand::rng().random_range(1..10));
+                    spawn_wood(&mut commands, &scene_assets, transform.translation + Vec3::new(0.0, 0.1, 0.0), rand::rng().random_range(1..=5));
                 }
             }
             _ => {}
