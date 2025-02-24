@@ -1,8 +1,13 @@
 //! A simple 3D scene with light shining over a cube sitting on a plane.
 
+mod fsm;
+mod resource;
+
 use bevy::{prelude::*, utils::HashMap};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::Rng;
+
+use crate::fsm::*;
 
 use smooth_bevy_cameras::{
     controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
@@ -84,7 +89,7 @@ pub struct House;
 
 #[derive(Component)]
 pub struct Villager {
-    pub moving_to: Vec3,
+    pub fsm: FSM,
 }
 
 fn spawn_house(commands: &mut Commands, scene_assets: &SceneAssets, position: Vec3) {
@@ -102,6 +107,9 @@ fn spawn_house(commands: &mut Commands, scene_assets: &SceneAssets, position: Ve
     ));
 }
 
+#[derive(Component)]
+pub struct Tree;
+
 const TREE_TYPES: [SceneAssetType; 3] = [
     SceneAssetType::TreePine,
     SceneAssetType::TreeRound,
@@ -113,6 +121,7 @@ fn spawn_tree(commands: &mut Commands, scene_assets: &SceneAssets, position: Vec
     commands.spawn((
         SceneRoot(scene_assets.handles.get(tree_type).unwrap().clone()),
         Transform::from_xyz(position.x, position.y, position.z).with_scale(GLOBAL_SCALE_VEC),
+        Tree,
         Name::new("Tree"),
     ));
 }
@@ -129,7 +138,8 @@ fn setup(
     // circular base
     commands.spawn((
         Mesh3d(meshes.add(Circle::new(WORLD_RADIUS))),
-        Transform::from_xyz(0.0, 0.0, 0.0).with_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
+        Transform::from_xyz(0.0, 0.0, 0.0)
+            .with_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
         MeshMaterial3d(materials.add(Color::srgb_u8(50, 200, 50))),
     ));
     // Houses
@@ -168,7 +178,7 @@ fn setup(
         ),
         Transform::from_xyz(0.0, 0.0, 0.0).with_scale(GLOBAL_SCALE_VEC),
         Villager {
-            moving_to: Vec3::new(0.0, 0.0, 0.0),
+            fsm: FSM::new_idle(),
         },
         Name::new("Villager"),
     ));
@@ -196,23 +206,73 @@ fn setup(
 const MOVEMENT_SPEED: f32 = 3.0;
 
 fn villager_movement(
-    mut villager: Query<(&mut Villager, &mut Transform), (With<Villager>, Without<House>)>,
+    mut villagers: Query<
+        (&mut Villager, &mut Transform),
+        (With<Villager>, Without<House>, Without<Tree>),
+    >,
+    houses: Query<(Entity, &Transform), (With<House>, Without<Villager>, Without<Tree>)>,
+    trees: Query<(Entity, &Transform), (With<Tree>, Without<Villager>, Without<House>)>,
     time: Res<Time>,
-    houses: Query<&Transform, With<House>>,
+    mut commands: Commands,
 ) {
-    for (mut villager, mut transform) in &mut villager {
-        if villager.moving_to.distance(transform.translation) < 0.1 {
-            // choose a random house to move to
-            let house_transforms = houses.iter().collect::<Vec<_>>();
-            let random_house =
-                house_transforms[rand::rng().random_range(0..house_transforms.len())];
-            villager.moving_to = random_house.translation;
-        } else {
-            // move towards the house
-            let direction = villager.moving_to - transform.translation;
-            transform.translation += direction.normalize() * MOVEMENT_SPEED * time.delta_secs();
-            transform.look_at(villager.moving_to, Vec3::Y);
+    let houses_iter = houses.iter().collect::<Vec<_>>();
+    let trees_iter = trees.iter().collect::<Vec<_>>();
+
+    for (mut villager, mut transform) in &mut villagers {
+        let mut action = FSMDecision::Continue;
+        // if villager.moving_to.distance(transform.translation) < 0.1 {
+        //     // choose a random house to move to
+        //     let house_transforms = houses.iter().collect::<Vec<_>>();
+        //     let random_house =
+        //         house_transforms[rand::rng().random_range(0..house_transforms.len())];
+        //     villager.moving_to = random_house.translation;
+        // } else {
+        //     // move towards the house
+        //     let direction = villager.moving_to - transform.translation;
+        //     transform.translation += direction.normalize() * MOVEMENT_SPEED * time.delta_secs();
+        //     transform.look_at(villager.moving_to, Vec3::Y);
+        // }
+        match villager.fsm.state {
+            FSMState::Idle => {
+                // choose a random house to move to or a random tree to gather from
+                if rand::rng().random_bool(0.1) {
+                    let (target_house, target_house_transform) =
+                        houses_iter[rand::rng().random_range(0..houses_iter.len())];
+                    action = FSMDecision::WalkTo(target_house, target_house_transform.translation);
+                } else {
+                    if trees_iter.len() > 0 {
+                        let (target_tree, target_tree_transform) =
+                            trees_iter[rand::rng().random_range(0..trees_iter.len())];
+                        action = FSMDecision::WalkToGather(target_tree, target_tree_transform.translation);
+                    }
+                }
+            }
+            FSMState::Walking(_, target)
+            | FSMState::PickingUp(_, target, _)
+            | FSMState::BringingTo(_, target, _)
+            | FSMState::WalkingToGather(_, target) => {
+                let direction = target - transform.translation;
+                transform.translation += direction.normalize() * MOVEMENT_SPEED * time.delta_secs();
+                transform.look_at(target, Vec3::Y);
+                if villager.fsm.is_finished(transform.translation) {
+                    action = match villager.fsm.state {
+                        FSMState::WalkingToGather(target, _) => FSMDecision::Gather(target, 1.0),
+                        _ => FSMDecision::Finished,
+                    }
+                }
+            }
+            FSMState::Gathering(entity, _) => {
+                if villager.fsm.is_finished(transform.translation) {
+                    action = FSMDecision::Finished;
+                    commands.entity(entity).despawn_recursive();
+                }
+            }
+            _ => {}
         }
+
+        println!("state: {:?}, action: {:?}", villager.fsm.state, action);
+
+        villager.fsm.state = villager.fsm.update(action, time.delta_secs());
     }
 }
 
