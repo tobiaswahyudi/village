@@ -44,13 +44,17 @@ pub fn spawn_wood(commands: &mut Commands, scene_assets: &SceneAssets, position:
             Name::new("Wood"),
         ))
         .with_children(|this| {
-            if count >= 1 {
+            if count == 1 {
                 this.spawn((
-                    Collider::cylinder(0.34, 0.085),
+                    Collider::cuboid(0.085, 0.34, 0.085),
                     Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
                 ));
             }
             if count >= 2 {
+                this.spawn((
+                    Collider::cylinder(0.34, 0.085),
+                    Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0)),
+                ));
                 this.spawn((
                     Collider::cylinder(0.34, 0.085),
                     Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::PI / 2.0))
