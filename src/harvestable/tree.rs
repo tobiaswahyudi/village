@@ -1,5 +1,5 @@
 // On average, this many trees will spawn per second
-const TREE_GROW_RATE: f32 = 0.2;
+const TREE_GROW_RATE: f32 = 0.6;
 
 // This should be removed when we do chunking stuff anyway
 const WORLD_RADIUS: f32 = 6.4;
