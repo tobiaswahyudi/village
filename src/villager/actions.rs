@@ -130,7 +130,12 @@ pub fn villager_update(
                 }
             }
             // TODO: can stack carried wood piles
-            FSMState::PickingUp(target_entity, target_wood_pile, target_transform, _carried_wood_pile) => {
+            FSMState::PickingUp(
+                target_entity,
+                target_wood_pile,
+                target_transform,
+                _carried_wood_pile,
+            ) => {
                 let direction = target_transform - transform.translation;
                 transform.translation += direction.normalize() * MOVEMENT_SPEED * time.delta_secs();
                 transform.look_at(target_transform, Vec3::Y);
@@ -140,26 +145,28 @@ pub fn villager_update(
                     if target_wood_entity.is_some() {
                         // Bring to random house
                         let (target_house, target_house_transform) =
-                                houses_iter[rand::rng().random_range(0..houses_iter.len())];
+                            houses_iter[rand::rng().random_range(0..houses_iter.len())];
 
                         // Make villager hold the wood pile
                         let mut held_wood_entity = Entity::PLACEHOLDER;
 
                         commands.entity(villager_entity).with_children(|children| {
-                            held_wood_entity = children.spawn((
-                                SceneRoot(
-                                    scene_assets
-                                        .handles
-                                        .get(&SceneAssetType::ResourceWood)
-                                        .unwrap()
-                                        .clone(),
-                                ),
-                                WoodPile {
-                                    count: target_wood_pile.count,
-                                    dropped: false,
-                                },
-                                Transform::from_translation(Vec3::new(0.0, 0.95, 0.0))
-                            )).id()
+                            held_wood_entity = children
+                                .spawn((
+                                    SceneRoot(
+                                        scene_assets
+                                            .handles
+                                            .get(&SceneAssetType::ResourceWood)
+                                            .unwrap()
+                                            .clone(),
+                                    ),
+                                    WoodPile {
+                                        count: target_wood_pile.count,
+                                        dropped: false,
+                                    },
+                                    Transform::from_translation(Vec3::new(0.0, 0.95, 0.0)),
+                                ))
+                                .id()
                         });
 
                         action = FSMDecision::BringTo(
@@ -172,7 +179,7 @@ pub fn villager_update(
                         commands.entity(target_entity).despawn_recursive();
                         // action = FSMDecision::Freeze;
                     }
-                } 
+                }
             }
             FSMState::Gathering(entity, _) => {
                 if villager.fsm.is_finished(transform.translation) {
@@ -205,7 +212,9 @@ pub fn villager_cancel_if_entity_deleted(
 
     for mut villager in &mut villagers {
         match villager.fsm.state {
-            FSMState::WalkingToGather(target, _) | FSMState::Gathering(target, _) => {
+            FSMState::WalkingToGather(target, _)
+            | FSMState::Gathering(target, _)
+            | FSMState::PickingUp(target, _, _, _) => {
                 if deleted_entities.contains(&target) {
                     villager.fsm.state = FSMState::Idle;
                 }
