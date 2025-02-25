@@ -192,7 +192,7 @@ pub fn villager_update(
                     spawn_wood(
                         &mut commands,
                         &scene_assets,
-                        transform.translation + Vec3::new(0.0, 0.1, 0.0),
+                        transform.translation + Vec3::new(0.0, 0.5, 0.0),
                         rand::rng().random_range(1..=5),
                     );
                 }
@@ -206,7 +206,7 @@ pub fn villager_update(
 
 pub fn villager_cancel_if_entity_deleted(
     mut villagers: Query<&mut Villager>,
-    mut deleted_entities: RemovedComponents<Tree>,
+    mut deleted_entities: RemovedComponents<Transform>,
 ) {
     let deleted_entities = deleted_entities.read().collect::<HashSet<_>>();
 

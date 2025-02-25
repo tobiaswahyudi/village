@@ -44,6 +44,4 @@ pub fn grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: R
 
     let random_position = Vec3::new(x, 0.0, z);
     spawn_tree(&mut commands, &scene_assets, random_position);
-
-    spawn_wood(&mut commands, &scene_assets, random_position + Vec3::new(0.0, 0.1, 0.0), 1);
 }
