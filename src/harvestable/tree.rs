@@ -1,5 +1,5 @@
 // On average, this many trees will spawn per second
-const TREE_GROW_RATE: f32 = 0.5;
+const TREE_GROW_RATE: f32 = 0.2;
 
 // This should be removed when we do chunking stuff anyway
 const WORLD_RADIUS: f32 = 6.4;
@@ -10,6 +10,7 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::assets::*;
+use crate::resource::*;
 
 #[derive(Component)]
 pub struct Tree;
@@ -43,4 +44,6 @@ pub fn grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: R
 
     let random_position = Vec3::new(x, 0.0, z);
     spawn_tree(&mut commands, &scene_assets, random_position);
+
+    spawn_wood(&mut commands, &scene_assets, random_position + Vec3::new(0.0, 0.1, 0.0), 1);
 }

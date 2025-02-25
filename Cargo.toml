@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 bevy = "0.15.2"
 bevy-inspector-egui = "0.29.1"
-rand = "0.9.0"
+rand = { version = "0.9.0", features = ["alloc"] }
 smooth-bevy-cameras = "0.13.0"
 bevy_rapier3d = "0.29.0"
 

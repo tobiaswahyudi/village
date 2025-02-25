@@ -5,14 +5,9 @@ use rand::Rng;
 use crate::assets::*;
 
 #[derive(Clone, Copy, Component, PartialEq, Debug)]
-pub struct PickupItem {
-    pub item_type: PickupItemType,
+pub struct WoodPile {
     pub count: u32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PickupItemType {
-    Wood,
+    pub dropped: bool,
 }
 
 pub fn spawn_wood(commands: &mut Commands, scene_assets: &SceneAssets, position: Vec3, count: u32) {
@@ -27,9 +22,9 @@ pub fn spawn_wood(commands: &mut Commands, scene_assets: &SceneAssets, position:
                     .unwrap()
                     .clone(),
             ),
-            PickupItem {
-                item_type: PickupItemType::Wood,
+            WoodPile {
                 count: count,
+                dropped: true,
             },
             Transform::from_translation(position).with_scale(GLOBAL_SCALE_VEC),
             Velocity {
@@ -85,11 +80,11 @@ pub fn spawn_wood(commands: &mut Commands, scene_assets: &SceneAssets, position:
 }
 
 pub fn update_wood_stacks(
-    wood_stacks: Query<(Entity, &PickupItem), Changed<PickupItem>>,
+    wood_stacks: Query<(Entity, &WoodPile), Changed<WoodPile>>,
     children: Query<&Children>,
     mut commands: Commands,
 ) {
-    for (wood_scene, pickup_item) in wood_stacks.iter() {
+    for (wood_scene, wood_pile) in wood_stacks.iter() {
         // This print message verifies that the stuff only updates when the pickup item spawns.
         // println!("Update Wood scene: {:?} {:?}", wood_scene, pickup_item);
         if let Ok(wood_children) = children.get(wood_scene) {
@@ -97,7 +92,7 @@ pub fn update_wood_stacks(
                 let wood_scene_root = wood_children[wood_children.len() - 1];
                 if let Ok(children) = children.get(wood_scene_root) {
                     for (i, child) in children.iter().enumerate() {
-                        if i as u32 >= pickup_item.count {
+                        if i as u32 >= wood_pile.count {
                             commands.entity(*child).insert(Visibility::Hidden);
                         } else {
                             commands.entity(*child).remove::<Visibility>();

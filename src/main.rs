@@ -96,7 +96,7 @@ fn setup(
 
     // Villagers
     spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
-    spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
+    // spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
 
     // Light
     commands.spawn((

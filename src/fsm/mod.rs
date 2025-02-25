@@ -2,7 +2,7 @@ const CLOSE_ENOUGH_DISTANCE: f32 = 0.1;
 
 ////////////////////////////////////////////////////////////////
 
-use crate::resource::PickupItem;
+use crate::resource::WoodPile;
 use bevy::math::*;
 use bevy::prelude::*;
 
@@ -23,24 +23,27 @@ pub struct TaskProgress {
 // or "assist in fighting a monster". Also makes the transitions less tedious.
 pub enum FSMState {
     Idle,
+    Freeze,
     Walking(Entity, Vec3),
     Building(Entity, TaskProgress),
     WalkingToGather(Entity, Vec3),
     Gathering(Entity, TaskProgress),
-    PickingUp(Entity, Vec3, Option<PickupItem>),
-    BringingTo(Entity, Vec3, Option<PickupItem>),
+    PickingUp(Entity, WoodPile, Vec3, Option<WoodPile>),
+    BringingTo(Entity, Vec3, WoodPile, Entity),
 }
 
+// What's decision even used for? It's translated directly to a state, so maybe just use the state directly?
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum FSMDecision {
+    Freeze,
     Continue,
     Finished,
     WalkTo(Entity, Vec3),
     Build(Entity, f32),
     WalkToGather(Entity, Vec3),
     Gather(Entity, f32),
-    PickUp(Entity, Vec3, Option<PickupItem>),
-    BringTo(Entity, Vec3, Option<PickupItem>),
+    PickUp(Entity, WoodPile, Vec3, Option<WoodPile>),
+    BringTo(Entity, Vec3, WoodPile, Entity),
 }
 
 impl FSM {
@@ -49,9 +52,11 @@ impl FSM {
             state: FSMState::Idle,
         }
     }
-    
+
     pub fn update(&mut self, decision: FSMDecision, time_delta: f32) -> FSMState {
+        println!("FSMState: {:?}", self.state);
         match (self.state, decision) {
+            (_, FSMDecision::Freeze) => FSMState::Freeze,
             (_, FSMDecision::Finished) => FSMState::Idle,
             // From Idle: Start doing the thing
             (FSMState::Idle, FSMDecision::WalkTo(target, position)) => {
@@ -78,11 +83,11 @@ impl FSM {
                     },
                 )
             }
-            (FSMState::Idle, FSMDecision::PickUp(item, position, held_item)) => {
-                FSMState::PickingUp(item, position, held_item)
+            (FSMState::Idle, FSMDecision::PickUp(item, wood_pile, position, held_item)) => {
+                FSMState::PickingUp(item, wood_pile, position, held_item)
             }
-            (FSMState::Idle, FSMDecision::BringTo(target, position, held_item)) => {
-                FSMState::BringingTo(target, position, held_item)
+            (FSMState::Idle, FSMDecision::BringTo(target, position, wood_pile, wood_entity)) => {
+                FSMState::BringingTo(target, position, wood_pile, wood_entity)
             }
             // Walking
             (FSMState::Walking(_, _), FSMDecision::WalkTo(target, position)) => {
@@ -104,13 +109,8 @@ impl FSM {
                     time_elapsed: task_progress.time_elapsed + time_delta,
                 },
             ),
-            // Picking up stuff
-            (FSMState::PickingUp(item, position, held_item), _) => {
-                FSMState::PickingUp(item, position, held_item)
-            }
-            // Bringing stuff to a target
-            (FSMState::BringingTo(target, position, held_item), _) => {
-                FSMState::BringingTo(target, position, held_item)
+            (FSMState::PickingUp(_, _, _, _), FSMDecision::BringTo(target_entity, target_position, wood_pile, wood_entity)) => {
+                FSMState::BringingTo(target_entity, target_position, wood_pile, wood_entity)
             }
             // Continue, or other invalid transitions
             (_, _) => self.state,
@@ -119,14 +119,17 @@ impl FSM {
 
     pub fn is_finished(&self, position: Vec3) -> bool {
         match self.state {
+            FSMState::Freeze => false,
             FSMState::Idle => false,
             FSMState::Building(_, task_progress) | FSMState::Gathering(_, task_progress) => {
+                // TODO: This should be handled by the Gatherable itself, so multiple villagers can gather at once.
                 task_progress.time_elapsed >= task_progress.time_needed
             }
-            FSMState::BringingTo(_, target_position, _)
+            FSMState::BringingTo(_, target_position, _, _)
             | FSMState::Walking(_, target_position)
             | FSMState::WalkingToGather(_, target_position)
-            | FSMState::PickingUp(_, target_position, _) => {
+            | FSMState::PickingUp(_, _, target_position, _) => {
+                println!("Distance: {}", position.distance(target_position));
                 position.distance(target_position) < CLOSE_ENOUGH_DISTANCE
             }
         }
