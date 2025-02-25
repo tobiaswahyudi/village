@@ -54,7 +54,6 @@ impl FSM {
     }
 
     pub fn update(&mut self, decision: FSMDecision, time_delta: f32) -> FSMState {
-        println!("FSMState: {:?}", self.state);
         match (self.state, decision) {
             (_, FSMDecision::Freeze) => FSMState::Freeze,
             (_, FSMDecision::Finished) => FSMState::Idle,
@@ -129,7 +128,6 @@ impl FSM {
             | FSMState::Walking(_, target_position)
             | FSMState::WalkingToGather(_, target_position)
             | FSMState::PickingUp(_, _, target_position, _) => {
-                println!("Distance: {}", position.distance(target_position));
                 position.distance(target_position) < CLOSE_ENOUGH_DISTANCE
             }
         }

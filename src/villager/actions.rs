@@ -162,8 +162,6 @@ pub fn villager_update(
                             )).id()
                         });
 
-                        println!("Bringing to house");
-
                         action = FSMDecision::BringTo(
                             target_house,
                             target_house_transform.translation,
