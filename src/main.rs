@@ -40,13 +40,17 @@ fn main() {
         .add_plugins(WorldInspectorPlugin::new())
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
-        .add_systems(Update, (villager_update, grow_tree))
+        .add_systems(Update, (villager_update, grow_tree, delete_underworld))
         .add_systems(
             PostUpdate,
             (update_wood_stacks, villager_cancel_if_entity_deleted),
         )
         .run();
 }
+
+#[derive(Component)]
+#[require(Sensor)]
+struct UnderworldDeleter;
 
 fn setup(
     mut commands: Commands,
@@ -70,6 +74,16 @@ fn setup(
                     .with_translation(Vec3::new(0.0, 0.0, -1.0)),
             ));
         });
+
+    commands.spawn((
+        Collider::cylinder(1.0, 2.0 * WORLD_RADIUS),
+        Transform::from_translation(Vec3::new(0.0, -3.1, 0.0)),
+        Sensor,
+        ActiveEvents::COLLISION_EVENTS,
+        ActiveCollisionTypes::DYNAMIC_STATIC,
+        UnderworldDeleter,
+    ));
+
     // Houses
     spawn_house(&mut commands, &scene_assets, Vec3::new(3.0, 0.0, 1.0));
     spawn_house(
@@ -96,7 +110,7 @@ fn setup(
 
     // Villagers
     spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
-    // spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
+    spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
 
     // Light
     commands.spawn((
@@ -116,4 +130,41 @@ fn setup(
             Vec3::Y,
         ),
     ));
+}
+
+fn delete_underworld(
+    mut collision_events: EventReader<CollisionEvent>,
+    underworld_deleter: Query<Entity, With<UnderworldDeleter>>,
+    parent_query: Query<&Parent, With<Collider>>,
+    mut commands: Commands,
+) {
+    if collision_events.is_empty() {
+        return;
+    }
+
+    let underworld_deleter = underworld_deleter.get_single().unwrap();
+
+    let collision_events = collision_events.read().collect::<Vec<_>>();
+    for event in collision_events.iter() {
+        let mut to_despawn = Entity::PLACEHOLDER;
+        match **event {
+            CollisionEvent::Started(entity1, entity2, _) => {
+                if entity1 == underworld_deleter {
+                    to_despawn = entity2;
+                }
+                if entity2 == underworld_deleter {
+                    to_despawn = entity1;
+                }
+            }
+            _ => {}
+        }
+        if to_despawn != Entity::PLACEHOLDER {
+            if let Ok(parent) = parent_query.get(to_despawn) {
+                // Lesson: The entity is what has the collider. Sometimes this is a child of something else
+                commands.entity(parent.get()).despawn_recursive();
+            } else {
+                commands.entity(to_despawn).despawn_recursive();
+            }
+        }
+    }
 }
