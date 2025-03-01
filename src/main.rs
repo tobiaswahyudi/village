@@ -12,10 +12,11 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 
 use crate::assets::*;
-use crate::harvestable::tree::*;
+use crate::fsm::*;
+use crate::harvestable::{harvestable::*, tree::*};
 use crate::structure::house::*;
-use crate::villager::{actions::*, villager::*};
-use resource::*;
+use crate::villager::villager::*;
+use crate::resource::*;
 
 use smooth_bevy_cameras::{
     controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
@@ -24,6 +25,7 @@ use smooth_bevy_cameras::{
 
 fn main() {
     App::new()
+        .add_event::<HarvestableDestroyed>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Village".to_string(),
@@ -38,13 +40,14 @@ fn main() {
         .add_plugins(LookTransformPlugin)
         .add_plugins(OrbitCameraPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(FSMPlugin)
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
-        .add_systems(Update, (villager_update, grow_tree, delete_underworld))
         .add_systems(
-            PostUpdate,
-            (update_wood_stacks, villager_cancel_if_entity_deleted),
+            Update,
+            (tick_grow_tree, delete_underworld, check_harvestable_destroyed, check_tree_should_be_destroyed),
         )
+        .add_systems(PostUpdate, update_wood_stacks)
         .run();
 }
 

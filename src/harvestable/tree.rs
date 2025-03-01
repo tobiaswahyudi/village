@@ -10,9 +10,12 @@ use bevy::prelude::*;
 use rand::Rng;
 
 use crate::assets::*;
-use crate::resource::*;
+
+use crate::harvestable::harvestable::*;
+use crate::resource::spawn_wood;
 
 #[derive(Component)]
+#[require(Harvestable)]
 pub struct Tree;
 
 const TREE_TYPES: [SceneAssetType; 3] = [
@@ -27,11 +30,15 @@ pub fn spawn_tree(commands: &mut Commands, scene_assets: &SceneAssets, position:
         SceneRoot(scene_assets.handles.get(tree_type).unwrap().clone()),
         Transform::from_xyz(position.x, position.y, position.z).with_scale(GLOBAL_SCALE_VEC),
         Tree,
+        Harvestable {
+            health: 2.0,
+            // max_health: 2.0,
+        },
         Name::new("Tree"),
     ));
 }
 
-pub fn grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: Res<Time>) {
+pub fn tick_grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: Res<Time>) {
     if rand::rng().random::<f32>() > TREE_GROW_RATE * time.delta_secs() {
         return;
     }
@@ -44,4 +51,22 @@ pub fn grow_tree(mut commands: Commands, scene_assets: Res<SceneAssets>, time: R
 
     let random_position = Vec3::new(x, 0.0, z);
     spawn_tree(&mut commands, &scene_assets, random_position);
+}
+
+pub fn check_tree_should_be_destroyed(
+    mut commands: Commands,
+    scene_assets: Res<SceneAssets>,
+    trees: Query<(Entity, &Transform, Option<&HarvestableDeathmark>), With<Tree>>,
+) {
+    for (entity, transform, harvestable_deathmark) in trees.iter() {
+        if harvestable_deathmark.is_some() {
+            commands.entity(entity).despawn_recursive();
+            spawn_wood(
+                &mut commands,
+                &scene_assets,
+                transform.translation + Vec3::new(0.0, 0.5, 0.0),
+                rand::rng().random_range(1..=5),
+            );
+        }
+    }
 }
