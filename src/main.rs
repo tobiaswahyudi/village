@@ -40,6 +40,7 @@ fn main() {
         .add_plugins(LookTransformPlugin)
         .add_plugins(OrbitCameraPlugin::default())
         .add_plugins(WorldInspectorPlugin::new())
+        .add_systems(Update, exit_on_escape)
         .add_plugins(FSMPlugin)
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
@@ -169,5 +170,14 @@ fn delete_underworld(
                 commands.entity(to_despawn).despawn_recursive();
             }
         }
+    }
+}
+
+fn exit_on_escape(
+    keyboard_input: Res<ButtonInput<KeyCode>>, 
+    mut exit: EventWriter<AppExit>
+) {
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        exit.send(AppExit::Success);
     }
 }
