@@ -5,7 +5,7 @@ use rand::Rng;
 use crate::fsm::components::*;
 use crate::fsm::transitions::*;
 
-use crate::resource::*;
+use crate::item_drop::*;
 use crate::structure::house::*;
 
 use crate::villager::{actions::*, villager::Villager};
@@ -16,7 +16,7 @@ pub fn fsm_update_picking_up(
     mut commands: Commands,
     mut walker: Query<(Entity, &mut Transform, &Villager, &FSMPickingUp)>,
     houses: Query<(Entity, &Transform), (With<House>, Without<FSMPickingUp>)>,
-    wood_resources: Query<(Entity, &Transform, &WoodPile), Without<FSMPickingUp>>,
+    wood_resources: Query<(Entity, &Transform, &WoodPile), (Without<FSMPickingUp>, With<ItemDrop>)>,
     time: Res<Time>,
     scene_assets: Res<SceneAssets>,
 ) {
@@ -37,17 +37,7 @@ pub fn fsm_update_picking_up(
                 commands.entity(entity).with_children(|children| {
                     held_wood_entity = children
                         .spawn((
-                            SceneRoot(
-                                scene_assets
-                                    .handles
-                                    .get(&SceneAssetType::ResourceWood)
-                                    .unwrap()
-                                    .clone(),
-                            ),
-                            WoodPile {
-                                count: target_wood_pile.count,
-                                dropped: false,
-                            },
+                            WoodPileModel::new(&scene_assets, target_wood_pile.count),
                             Transform::from_translation(Vec3::new(0.0, 0.95, 0.0)),
                         ))
                         .id()

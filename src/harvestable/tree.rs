@@ -12,7 +12,7 @@ use rand::Rng;
 use crate::assets::*;
 
 use crate::harvestable::harvestable::*;
-use crate::resource::spawn_wood;
+use crate::item_drop::*;
 
 #[derive(Component)]
 #[require(Harvestable)]

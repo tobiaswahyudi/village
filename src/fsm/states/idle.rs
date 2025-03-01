@@ -8,7 +8,7 @@ use crate::fsm::components::*;
 use crate::fsm::transitions::*;
 
 use crate::harvestable::tree::*;
-use crate::resource::*;
+use crate::item_drop::*;
 use crate::structure::house::*;
 
 #[derive(Clone)]
@@ -30,14 +30,11 @@ pub fn fsm_update_idle(
     idlers: Query<(Entity, &Transform), With<FSMIdle>>,
     houses: Query<(Entity, &Transform), (With<House>, Without<FSMIdle>)>,
     trees: Query<(Entity, &Transform), (With<Tree>, Without<FSMIdle>)>,
-    wood_resources: Query<(Entity, &Transform, &WoodPile), Without<FSMIdle>>,
+    wood_resources: Query<(Entity, &Transform, &WoodPile), (Without<FSMIdle>, With<ItemDrop>)>,
 ) {
     let houses_iter = houses.iter().collect::<Vec<_>>();
     let trees_iter = trees.iter().collect::<Vec<_>>();
-    let wood_resources_iter = wood_resources
-        .iter()
-        .filter(|(_, _, wood_pile)| wood_pile.dropped)
-        .collect::<Vec<_>>();
+    let wood_resources_iter = wood_resources.iter().collect::<Vec<_>>();
 
     let dist = WeightedIndex::new(&WEIGHTS).unwrap();
     let mut rng = rand::rng();

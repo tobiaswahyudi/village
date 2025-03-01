@@ -3,7 +3,7 @@ const WORLD_RADIUS: f32 = 7.0;
 mod assets;
 mod fsm;
 mod harvestable;
-mod resource;
+mod item_drop;
 mod structure;
 mod villager;
 
@@ -16,7 +16,7 @@ use crate::fsm::*;
 use crate::harvestable::{harvestable::*, tree::*};
 use crate::structure::house::*;
 use crate::villager::villager::*;
-use crate::resource::*;
+use crate::item_drop::*;
 
 use smooth_bevy_cameras::{
     controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
