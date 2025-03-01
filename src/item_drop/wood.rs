@@ -8,6 +8,7 @@ use crate::item_drop::*;
 #[derive(Clone, Copy, Component, PartialEq, Debug)]
 pub struct WoodPile {
     pub count: u32,
+    pub max_count: u32,
 }
 
 #[derive(Bundle)]
@@ -26,12 +27,9 @@ impl WoodPileModel {
                     .unwrap()
                     .clone(),
             ),
-            wood_pile: WoodPile { count },
+            wood_pile: WoodPile { count, max_count: 32 },
         }
     }
-}
-pub fn spawn_wood_model(commands: &mut Commands, scene_assets: &SceneAssets, count: u32) {
-    commands.spawn((ItemDrop, WoodPile { count }));
 }
 
 pub fn spawn_wood(commands: &mut Commands, scene_assets: &SceneAssets, position: Vec3, count: u32) {
@@ -100,21 +98,27 @@ pub fn spawn_wood(commands: &mut Commands, scene_assets: &SceneAssets, position:
 
 pub fn update_wood_stacks(
     wood_stacks: Query<(Entity, &WoodPile), Changed<WoodPile>>,
+    wood_stacks_added: Query<(Entity, &WoodPile), Added<WoodPile>>,
     children: Query<&Children>,
     mut commands: Commands,
 ) {
-    for (wood_scene, wood_pile) in wood_stacks.iter() {
+    for (wood_scene, wood_pile) in
+        wood_stacks.iter().chain(wood_stacks_added.iter())
+    {
+        // println!("Update Wood scene: {:?} {:?}", wood_scene, wood_pile);
         // This print message verifies that the stuff only updates when the pickup item spawns.
-        // println!("Update Wood scene: {:?} {:?}", wood_scene, pickup_item);
+        // println!("Update Wood scene: {:?}", wood_scene);
         if let Ok(wood_children) = children.get(wood_scene) {
             if wood_children.len() > 0 {
                 let wood_scene_root = wood_children[wood_children.len() - 1];
+                // println!("Wood scene root: {:?}", wood_scene_root);
                 if let Ok(children) = children.get(wood_scene_root) {
                     for (i, child) in children.iter().enumerate() {
+                        // println!("-- iter children: {:?} {:?} <=> {:?}", i, child, wood_pile.count);
                         if i as u32 >= wood_pile.count {
                             commands.entity(*child).insert(Visibility::Hidden);
                         } else {
-                            commands.entity(*child).remove::<Visibility>();
+                            commands.entity(*child).insert(Visibility::Inherited);
                         }
                     }
                 }

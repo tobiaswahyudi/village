@@ -52,7 +52,7 @@ pub fn fsm_update_idle(
                     entity,
                     FSMWalkingTo {
                         target: target_house,
-                        proximity: 0.1,
+                        proximity: 0.2,
                     },
                 );
             }
@@ -66,7 +66,7 @@ pub fn fsm_update_idle(
                         entity,
                         FSMWalkingToHarvest {
                             target: target_tree,
-                            proximity: 0.1,
+                            proximity: 0.2,
                         },
                     );
                 }
@@ -90,7 +90,7 @@ pub fn fsm_update_idle(
                         entity,
                         FSMPickingUp {
                             target: target_wood,
-                            proximity: 0.1,
+                            proximity: 0.2,
                         },
                     );
                 }

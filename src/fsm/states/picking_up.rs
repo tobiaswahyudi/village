@@ -6,8 +6,8 @@ use crate::fsm::components::*;
 use crate::fsm::transitions::*;
 
 use crate::item_drop::*;
-use crate::structure::house::*;
 
+use crate::structure::wood_hut::WoodHut;
 use crate::villager::{actions::*, villager::Villager};
 
 use crate::assets::*;
@@ -15,21 +15,22 @@ use crate::assets::*;
 pub fn fsm_update_picking_up(
     mut commands: Commands,
     mut walker: Query<(Entity, &mut Transform, &Villager, &FSMPickingUp)>,
-    houses: Query<(Entity, &Transform), (With<House>, Without<FSMPickingUp>)>,
+    wood_huts: Query<(Entity, &Transform), (With<WoodHut>, Without<FSMPickingUp>)>,
     wood_resources: Query<(Entity, &Transform, &WoodPile), (Without<FSMPickingUp>, With<ItemDrop>)>,
     time: Res<Time>,
     scene_assets: Res<SceneAssets>,
 ) {
-    let houses_iter = houses.iter().collect::<Vec<_>>();
+    let wood_huts_iter = wood_huts.iter().collect::<Vec<_>>();
 
     for (entity, mut transform, villager, fsm_picking_up) in &mut walker {
         if let Ok((target_entity, target_transform, target_wood_pile)) = wood_resources.get(fsm_picking_up.target) {
             walk_to(&mut transform, target_transform, villager.movement_speed, &time);
 
+            println!("distance vs proximity: {:?} {:?}", transform.translation.distance(target_transform.translation), fsm_picking_up.proximity);
             if transform.translation.distance(target_transform.translation) < fsm_picking_up.proximity {
-                // Bring to random house
-                let (target_house, _target_house_transform) =
-                    houses_iter[rand::rng().random_range(0..houses_iter.len())];
+                // Bring to random wood_hut
+                let (target_wood_hut, _target_wood_hut_transform) =
+                    wood_huts_iter[rand::rng().random_range(0..wood_huts_iter.len())];
 
                 // Make villager hold the wood pile
                 let mut held_wood_entity = Entity::PLACEHOLDER;
@@ -47,9 +48,9 @@ pub fn fsm_update_picking_up(
                     &mut commands,
                     entity,
                     FSMBringingTo {
-                        target: target_house,
+                        target: target_wood_hut,
                         held_resource: Some(held_wood_entity),
-                        proximity: 0.1,
+                        proximity: 0.2,
                     },
                 );
 

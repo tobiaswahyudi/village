@@ -10,13 +10,14 @@ mod villager;
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::*;
+use structure::wood_hut::spawn_wood_hut;
 
 use crate::assets::*;
 use crate::fsm::*;
 use crate::harvestable::{harvestable::*, tree::*};
+use crate::item_drop::*;
 use crate::structure::house::*;
 use crate::villager::villager::*;
-use crate::item_drop::*;
 
 use smooth_bevy_cameras::{
     controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
@@ -44,9 +45,15 @@ fn main() {
         .add_plugins(FSMPlugin)
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
+        .add_systems(PostStartup, update_wood_stacks)
         .add_systems(
             Update,
-            (tick_grow_tree, delete_underworld, check_harvestable_destroyed, check_tree_should_be_destroyed),
+            (
+                tick_grow_tree,
+                delete_underworld,
+                check_harvestable_destroyed,
+                check_tree_should_be_destroyed,
+            ),
         )
         .add_systems(PostUpdate, update_wood_stacks)
         .run();
@@ -90,31 +97,15 @@ fn setup(
 
     // Houses
     spawn_house(&mut commands, &scene_assets, Vec3::new(3.0, 0.0, 1.0));
-    spawn_house(
+    spawn_wood_hut(
         &mut commands,
         &scene_assets,
         Vec3::new(0.633975, 0.0, 3.09808),
     );
-    spawn_house(
-        &mut commands,
-        &scene_assets,
-        Vec3::new(-2.36603, 0.0, 2.09808),
-    );
-    spawn_house(&mut commands, &scene_assets, Vec3::new(-3.0, 0.0, -1.0));
-    spawn_house(
-        &mut commands,
-        &scene_assets,
-        Vec3::new(-0.633975, 0.0, -3.09808),
-    );
-    spawn_house(
-        &mut commands,
-        &scene_assets,
-        Vec3::new(2.36603, 0.0, -2.09808),
-    );
 
     // Villagers
     spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
-    spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
+    // spawn_villager(&mut commands, &scene_assets, Vec3::new(0.0, 0.0, 0.0));
 
     // Light
     commands.spawn((

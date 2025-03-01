@@ -5,24 +5,24 @@ pub struct HasFSM;
 
 // FSM States
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[require(HasFSM)]
 pub struct FSMIdle;
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[require(HasFSM)]
 pub struct FSMWalkingTo {
     pub target: Entity,
     pub proximity: f32,
 }
 
-#[derive(Component)]
-#[require(HasFSM)]
-pub struct FSMBuilding {
-    pub target: Entity,
-}
+// #[derive(Component, Debug)]
+// #[require(HasFSM)]
+// pub struct FSMBuilding {
+//     pub target: Entity,
+// }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[require(HasFSM)]
 pub struct FSMWalkingToHarvest {
     pub target: Entity,
@@ -30,20 +30,20 @@ pub struct FSMWalkingToHarvest {
     pub proximity: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[require(HasFSM)]
 pub struct FSMHarvesting {
     pub target: Entity,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[require(HasFSM)]
 pub struct FSMPickingUp {
     pub target: Entity,
     pub proximity: f32,
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[require(HasFSM)]
 pub struct FSMBringingTo {
     pub target: Entity,
